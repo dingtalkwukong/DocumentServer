@@ -91,9 +91,10 @@ require_checksum_path "server/DocService/docservice"
 require_checksum_path "server/FileConverter/converter"
 require_checksum_path "server/Metrics/metrics"
 require_checksum_path "server/FileConverter/bin/x2t"
-require_checksum_path "sdkjs/word/sdk-all.js"
-require_checksum_path "sdkjs/cell/sdk-all.js"
-require_checksum_path "sdkjs/slide/sdk-all.js"
+require_checksum_path "sdkjs/common/device_scale.js"
+require_checksum_path "sdkjs/word/sdk-all-min.js"
+require_checksum_path "sdkjs/cell/sdk-all-min.js"
+require_checksum_path "sdkjs/slide/sdk-all-min.js"
 require_any_checksum_path \
   "web-apps/apps/api/documents/api.js" \
   "web-apps/apps/api/documents/api.js.tpl"
@@ -101,9 +102,10 @@ require_any_checksum_path \
 require_owned_path "${doc_root}/server/FileConverter/converter"
 require_owned_path "${doc_root}/server/Metrics/metrics"
 require_owned_path "${doc_root}/server/FileConverter/bin/x2t"
-require_owned_path "${doc_root}/sdkjs/word/sdk-all.js"
-require_owned_path "${doc_root}/sdkjs/cell/sdk-all.js"
-require_owned_path "${doc_root}/sdkjs/slide/sdk-all.js"
+require_owned_path "${doc_root}/sdkjs/common/device_scale.js"
+require_owned_path "${doc_root}/sdkjs/word/sdk-all-min.js"
+require_owned_path "${doc_root}/sdkjs/cell/sdk-all-min.js"
+require_owned_path "${doc_root}/sdkjs/slide/sdk-all-min.js"
 
 if ! grep -q '^onlyoffice-documentserver[[:space:]]' "${official_package_record}"; then
   echo "official package record does not include onlyoffice-documentserver" >&2
@@ -124,7 +126,8 @@ require_manifest_text '"server"'
 require_manifest_text '"web-apps"'
 require_manifest_text '"reused_from_base_verified"'
 require_manifest_text '"server/FileConverter/bin/x2t"'
-require_manifest_text '"sdkjs/word/sdk-all.js"'
+require_manifest_text '"sdkjs/common/device_scale.js"'
+require_manifest_text '"sdkjs/word/sdk-all-min.js"'
 
 if ! grep -q '"rebuilt_paths"' "${manifest}" || \
    ! grep -q '"server"' "${manifest}" || \

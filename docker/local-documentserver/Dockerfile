@@ -248,10 +248,11 @@ chmod 0755 /workspace/package-root/DEBIAN/postinst
 
 cat > /tmp/reused-checksum-paths <<'PATHS'
 server/FileConverter/bin/x2t
+sdkjs/word/sdk-all-min.js
+sdkjs/cell/sdk-all-min.js
+sdkjs/slide/sdk-all-min.js
 sdkjs/visio/sdk-all.js
 sdkjs/visio/sdk-all-min.js
-sdkjs/pdf/sdk-all.js
-sdkjs/pdf/sdk-all-min.js
 PATHS
 
 while IFS= read -r rel; do
