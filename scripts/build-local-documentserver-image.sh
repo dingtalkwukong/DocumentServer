@@ -44,10 +44,27 @@ for platform in ${PLATFORMS//,/ }; do
   fi
 done
 
+repo_remote_url() {
+  local path="$1" prefer_fork="${2:-false}" remote url
+  local remotes=(origin)
+
+  if [[ "${prefer_fork}" == "true" ]]; then
+    remotes=(fork origin)
+  fi
+
+  for remote in "${remotes[@]}"; do
+    url="$(git -C "${path}" config --get "remote.${remote}.url" 2>/dev/null || true)"
+    if [[ -n "${url}" ]]; then
+      printf '%s\n' "${url}"
+      return
+    fi
+  done
+}
+
 repo_json_line() {
-  local name="$1" path="$2" default_url="$3" source="$4"
+  local name="$1" path="$2" default_url="$3" source="$4" prefer_fork="${5:-false}"
   local url ref commit dirty
-  url="$(git -C "${path}" config --get remote.origin.url 2>/dev/null || true)"
+  url="$(repo_remote_url "${path}" "${prefer_fork}")"
   if [[ -z "${url}" ]]; then
     url="${default_url}"
   fi
@@ -70,9 +87,9 @@ repo_json_line() {
 
 source_repositories_json="$(
   {
-    repo_json_line "DocumentServer" "." "https://github.com/ONLYOFFICE/DocumentServer.git" "local-context"
-    repo_json_line "server" "server" "https://github.com/ONLYOFFICE/server.git" "local-context"
-    repo_json_line "web-apps" "web-apps" "https://github.com/ONLYOFFICE/web-apps.git" "local-context"
+    repo_json_line "DocumentServer" "." "https://github.com/dingtalkwukong/DocumentServer.git" "local-context" true
+    repo_json_line "server" "server" "https://github.com/dingtalkwukong/server.git" "local-context" true
+    repo_json_line "web-apps" "web-apps" "https://github.com/dingtalkwukong/web-apps.git" "local-context" true
     repo_json_line "core" "core" "https://github.com/ONLYOFFICE/core.git" "reused-from-base-image"
     repo_json_line "core-fonts" "core-fonts" "https://github.com/ONLYOFFICE/core-fonts.git" "reused-from-base-image"
     repo_json_line "dictionaries" "dictionaries" "https://github.com/ONLYOFFICE/dictionaries.git" "reused-from-base-image"
