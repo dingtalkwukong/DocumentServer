@@ -129,6 +129,18 @@ export PUBLISHER_URL="https://www.onlyoffice.com/"
 cd /workspace/source/server
 npm ci
 npm run build
+sed -i \
+  -e "s|\(const buildVersion = \).*|\1'${PRODUCT_VERSION}';|" \
+  -e "s|\(const buildNumber = \).*|\1${SOURCE_BUILD_NUMBER};|" \
+  /workspace/source/server/Common/sources/commondefines.js
+PRODUCT_VERSION="${PRODUCT_VERSION}" SOURCE_BUILD_NUMBER="${SOURCE_BUILD_NUMBER}" node -e "\
+const fs = require('fs');\
+const text = fs.readFileSync('./Common/sources/commondefines.js', 'utf8');\
+const version = (text.match(/const buildVersion = '([^']+)'/) || [])[1];\
+const build = (text.match(/const buildNumber = ([^;]+);/) || [])[1];\
+if (version !== process.env.PRODUCT_VERSION || String(build) !== process.env.SOURCE_BUILD_NUMBER) {\
+  throw new Error('commondefines version mismatch: ' + version + '.' + build);\
+}"
 
 if [ "${TARGETARCH}" = "arm64" ] && [ -d /workspace/source/server/DocService/node_modules/sharp ]; then
   export npm_config_platform=linux
@@ -307,6 +319,10 @@ jq -n \
   '{generated_at:$generated_at,target_platform:$target_platform,target_arch:$target_arch,build_platform:$build_platform,base_image:$base_image,product_version:$product_version,build_number:$build_number,source_build_number:$source_build_number,local_version:$local_version,source_hash_postfix:$source_hash_postfix,official_package:{name:$official_package,version:$official_version,architecture:$official_arch},deb:{file:$deb_file,architecture:$deb_arch,sha256:$deb_sha256},checksums:$checksums[0],repositories:$repositories[0],local_build:{rebuilt_paths:["server","web-apps","sdkjs"],rebuilt_checksum_paths:$rebuilt_checksum_paths[0],reused_from_base:["core","core-fonts","dictionaries","document-formats","document-templates","sdkjs-plugins","FileConverter/bin native binaries","server/tools"],reused_from_base_verified:$reused_checksum_paths[0],packaging:"dpkg-deb from official package root plus local server/web-apps/sdkjs outputs"}}' \
   > /workspace/build-artifacts/source-manifest.json
 EOF
+
+FROM scratch AS source-package-artifacts
+
+COPY --from=source-package /workspace/build-artifacts/ /
 
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE} AS runtime
 
