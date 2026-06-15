@@ -68,6 +68,21 @@ require_manifest_text() {
   fi
 }
 
+require_installed_api_text() {
+  text="$1"
+  if [ -f "${doc_root}/web-apps/apps/api/documents/api.js" ] && \
+     grep -F -q "${text}" "${doc_root}/web-apps/apps/api/documents/api.js"; then
+    return 0
+  fi
+  if [ -f "${doc_root}/web-apps/apps/api/documents/api.js.tpl" ] && \
+     grep -F -q "${text}" "${doc_root}/web-apps/apps/api/documents/api.js.tpl"; then
+    return 0
+  fi
+
+  echo "installed API is missing expected text: ${text}" >&2
+  exit 1
+}
+
 require_file "${manifest}"
 require_file "${checksums}"
 require_file "${official_package_record}"
@@ -128,6 +143,12 @@ require_manifest_text '"reused_from_base_verified"'
 require_manifest_text '"server/FileConverter/bin/x2t"'
 require_manifest_text '"sdkjs/common/device_scale.js"'
 require_manifest_text '"sdkjs/word/sdk-all-min.js"'
+
+require_installed_api_text "function shouldUseNativePdfPreview(config)"
+require_installed_api_text "config.document && config.document.isForm !== true"
+require_installed_api_text "function getPreviewTraceElapsedMs(config)"
+require_installed_api_text "previewElapsedMs: getPreviewTraceElapsedMs(config)"
+require_installed_api_text "iframe.setAttribute(\"data-onlyoffice-native-pdf-preview\", \"true\");"
 
 if ! grep -q '"rebuilt_paths"' "${manifest}" || \
    ! grep -q '"server"' "${manifest}" || \
