@@ -187,6 +187,8 @@ COPY --from=official-package /usr/share/doc/onlyoffice-documentserver /workspace
 COPY --from=web-apps-build /workspace/web-apps-output/web-apps /workspace/local-build/web-apps
 COPY --from=web-apps-build /workspace/web-apps-output/sdkjs /workspace/local-build/sdkjs
 COPY --from=server-build /workspace/server-output/ /workspace/local-build/server/
+COPY server/Common/config/default.json /workspace/local-config/default.json
+COPY server/Common/config/production-linux.json /workspace/local-config/production-linux.json
 
 RUN <<'EOF'
 set -eu
@@ -203,6 +205,20 @@ cp -a /workspace/local-build/sdkjs/. "${doc_root}/sdkjs/"
 install -m 0755 /workspace/local-build/server/docservice "${doc_root}/server/DocService/docservice"
 install -m 0755 /workspace/local-build/server/converter "${doc_root}/server/FileConverter/converter"
 install -m 0755 /workspace/local-build/server/metrics "${doc_root}/server/Metrics/metrics"
+
+native_pdf_cache="$(jq -c '.services.CoAuthoring.server.nativePdfCache' /workspace/local-config/default.json)"
+native_pdf_cache_production="$(jq -c '.services.CoAuthoring.server.nativePdfCache' /workspace/local-config/production-linux.json)"
+jq --argjson nativePdfCache "${native_pdf_cache}" \
+  '.services.CoAuthoring.server.nativePdfCache = $nativePdfCache' \
+  /workspace/package-root/etc/onlyoffice/documentserver/default.json \
+  > /tmp/default.json
+mv /tmp/default.json /workspace/package-root/etc/onlyoffice/documentserver/default.json
+jq --argjson nativePdfCache "${native_pdf_cache}" \
+   --argjson productionNativePdfCache "${native_pdf_cache_production}" \
+  '.services.CoAuthoring.server.nativePdfCache = ($nativePdfCache * $productionNativePdfCache)' \
+  /workspace/package-root/etc/onlyoffice/documentserver/production-linux.json \
+  > /tmp/production-linux.json
+mv /tmp/production-linux.json /workspace/package-root/etc/onlyoffice/documentserver/production-linux.json
 
 rm -rf \
   /workspace/package-root/var/www/onlyoffice/documentserver-example \
@@ -243,7 +259,8 @@ fi
 mkdir -p \
   /var/www/onlyoffice/documentserver/fonts \
   /var/log/onlyoffice/documentserver \
-  /var/lib/onlyoffice/documentserver/App_Data
+  /var/lib/onlyoffice/documentserver/App_Data \
+  /var/lib/onlyoffice/documentserver/App_Data/pdf-native-cache
 chown -R ds:ds /var/www/onlyoffice/documentserver /var/lib/onlyoffice/documentserver || true
 exit 0
 POSTINST

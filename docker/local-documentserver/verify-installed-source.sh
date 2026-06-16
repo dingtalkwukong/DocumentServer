@@ -83,6 +83,27 @@ require_installed_api_text() {
   exit 1
 }
 
+require_installed_docservice_text() {
+  text="$1"
+  if grep -a -F -q "${text}" "${doc_root}/server/DocService/docservice"; then
+    return 0
+  fi
+
+  echo "installed docservice is missing expected text: ${text}" >&2
+  exit 1
+}
+
+require_config_text() {
+  file="$1"
+  text="$2"
+  if grep -F -q "${text}" "${file}"; then
+    return 0
+  fi
+
+  echo "config ${file} is missing expected text: ${text}" >&2
+  exit 1
+}
+
 require_file "${manifest}"
 require_file "${checksums}"
 require_file "${official_package_record}"
@@ -149,6 +170,19 @@ require_installed_api_text "config.document && config.document.isForm !== true"
 require_installed_api_text "function getPreviewTraceElapsedMs(config)"
 require_installed_api_text "previewElapsedMs: getPreviewTraceElapsedMs(config)"
 require_installed_api_text "iframe.setAttribute(\"data-onlyoffice-native-pdf-preview\", \"true\");"
+require_installed_api_text "function registerNativePdfCache(config, iframe, sourceUrl)"
+require_installed_api_text "downloadfile-cache/register/"
+require_installed_api_text "native-pdf-cache-hit-url"
+require_installed_api_text "native-pdf-cache-fallback"
+
+require_installed_docservice_text "/downloadfile-cache/register/:cacheDocId"
+require_installed_docservice_text "/downloadfile-cache/:cacheKey.pdf"
+require_installed_docservice_text "services.CoAuthoring.server.nativePdfCache"
+
+require_config_text /etc/onlyoffice/documentserver/default.json '"nativePdfCache"'
+require_config_text /etc/onlyoffice/documentserver/default.json '"cacheControl": "private, max-age=7200"'
+require_config_text /etc/onlyoffice/documentserver/production-linux.json '"nativePdfCache"'
+require_config_text /etc/onlyoffice/documentserver/production-linux.json '/var/lib/onlyoffice/documentserver/App_Data/pdf-native-cache'
 
 if ! grep -q '"rebuilt_paths"' "${manifest}" || \
    ! grep -q '"server"' "${manifest}" || \
