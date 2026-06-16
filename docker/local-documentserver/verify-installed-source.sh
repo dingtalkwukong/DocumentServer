@@ -9,6 +9,9 @@ manifest="${build_info_dir}/source-manifest.json"
 checksums="${build_info_dir}/source-checksums.sha256"
 official_package_record="${build_info_dir}/official-package-before-purge.txt"
 official_file_list="${build_info_dir}/official-package-file-list-before-purge.txt"
+product_version="$(python3 -c 'import json; print(json.load(open("'"${manifest}"'"))["product_version"])')"
+source_build_number="$(python3 -c 'import json; print(json.load(open("'"${manifest}"'"))["source_build_number"])')"
+about_version="${product_version}.${source_build_number}"
 
 if [ "${actual_version}" != "${expected_version}" ]; then
   echo "unexpected onlyoffice-documentserver version: ${actual_version}, expected ${expected_version}" >&2
@@ -93,6 +96,17 @@ require_installed_docservice_text() {
   exit 1
 }
 
+require_about_text() {
+  text="$1"
+  file="${doc_root}/web-apps/apps/common/main/lib/view/About.js"
+  if [ -f "${file}" ] && grep -F -q "${text}" "${file}"; then
+    return 0
+  fi
+
+  echo "installed About.js is missing expected text: ${text}" >&2
+  exit 1
+}
+
 require_config_text() {
   file="$1"
   text="$2"
@@ -174,6 +188,19 @@ require_installed_api_text "function registerNativePdfCache(config, iframe, sour
 require_installed_api_text "downloadfile-cache/register/"
 require_installed_api_text "native-pdf-cache-hit-url"
 require_installed_api_text "native-pdf-cache-fallback"
+require_installed_api_text "return '${product_version}';"
+require_about_text "this.txtVersionNum = '${about_version}';"
+
+if grep -F -q "return '${expected_version}';" "${doc_root}/web-apps/apps/api/documents/api.js" 2>/dev/null || \
+   grep -F -q "return '${expected_version}';" "${doc_root}/web-apps/apps/api/documents/api.js.tpl" 2>/dev/null; then
+  echo "installed API version unexpectedly uses local package version: ${expected_version}" >&2
+  exit 1
+fi
+
+if grep -F -q "this.txtVersionNum = '${expected_version}" "${doc_root}/web-apps/apps/common/main/lib/view/About.js"; then
+  echo "installed About version unexpectedly uses local package version: ${expected_version}" >&2
+  exit 1
+fi
 
 require_installed_docservice_text "/downloadfile-cache/register/:cacheDocId"
 require_installed_docservice_text "/downloadfile-cache/:cacheKey.pdf"
@@ -183,6 +210,8 @@ require_config_text /etc/onlyoffice/documentserver/default.json '"nativePdfCache
 require_config_text /etc/onlyoffice/documentserver/default.json '"cacheControl": "private, max-age=7200"'
 require_config_text /etc/onlyoffice/documentserver/production-linux.json '"nativePdfCache"'
 require_config_text /etc/onlyoffice/documentserver/production-linux.json '/var/lib/onlyoffice/documentserver/App_Data/pdf-native-cache'
+require_config_text /etc/onlyoffice/documentserver/local.json '"nativePdfCache"'
+require_config_text /etc/onlyoffice/documentserver/local.json '/var/lib/onlyoffice/documentserver/App_Data/pdf-native-cache'
 
 if ! grep -q '"rebuilt_paths"' "${manifest}" || \
    ! grep -q '"server"' "${manifest}" || \

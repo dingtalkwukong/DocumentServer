@@ -7,9 +7,15 @@ BASE_IMAGE="${BASE_IMAGE:-onlyoffice/documentserver:9.4.0}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
 
 LOCAL_VERSION="${LOCAL_VERSION:-${IMAGE_TAG}}"
-PRODUCT_VERSION="${PRODUCT_VERSION:-${LOCAL_VERSION%%-local.*}}"
-if [[ "${PRODUCT_VERSION}" == "${LOCAL_VERSION}" ]]; then
-  PRODUCT_VERSION="${PRODUCT_VERSION:-9.4.0}"
+if [[ -n "${PRODUCT_VERSION+x}" ]]; then
+  if [[ ! "${PRODUCT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "PRODUCT_VERSION must be a three-part version such as 9.4.0, got: ${PRODUCT_VERSION}" >&2
+    exit 1
+  fi
+elif [[ "${LOCAL_VERSION}" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+  PRODUCT_VERSION="${BASH_REMATCH[1]}"
+else
+  PRODUCT_VERSION="9.4.0"
 fi
 BUILD_NUMBER="${BUILD_NUMBER:-${LOCAL_VERSION#${PRODUCT_VERSION}-}}"
 if [[ "${BUILD_NUMBER}" == "${LOCAL_VERSION}" ]]; then

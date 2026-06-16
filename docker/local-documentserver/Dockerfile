@@ -64,6 +64,7 @@ FROM build-base AS web-apps-build
 
 ARG LOCAL_VERSION=9.4.0-local.1
 ARG PRODUCT_VERSION=9.4.0
+ARG SOURCE_BUILD_NUMBER=1
 ARG SOURCE_HASH_POSTFIX=local-source-build
 
 WORKDIR /workspace/source
@@ -74,7 +75,7 @@ RUN <<'EOF'
 set -eux
 export NODE_ENV=production
 export PRODUCT_VERSION="${PRODUCT_VERSION}"
-export BUILD_NUMBER="${LOCAL_VERSION}"
+export BUILD_NUMBER="${SOURCE_BUILD_NUMBER}"
 export PUBLISHER_NAME="Ascensio System SIA"
 export PUBLISHER_URL="https://www.onlyoffice.com/"
 
@@ -219,6 +220,14 @@ jq --argjson nativePdfCache "${native_pdf_cache}" \
   /workspace/package-root/etc/onlyoffice/documentserver/production-linux.json \
   > /tmp/production-linux.json
 mv /tmp/production-linux.json /workspace/package-root/etc/onlyoffice/documentserver/production-linux.json
+if [ -f /workspace/package-root/etc/onlyoffice/documentserver/local.json ]; then
+  jq --argjson nativePdfCache "${native_pdf_cache}" \
+     --argjson productionNativePdfCache "${native_pdf_cache_production}" \
+    '.services.CoAuthoring.server.nativePdfCache = ($nativePdfCache * $productionNativePdfCache * (.services.CoAuthoring.server.nativePdfCache // {}))' \
+    /workspace/package-root/etc/onlyoffice/documentserver/local.json \
+    > /tmp/local.json
+  mv /tmp/local.json /workspace/package-root/etc/onlyoffice/documentserver/local.json
+fi
 
 rm -rf \
   /workspace/package-root/var/www/onlyoffice/documentserver-example \
@@ -427,6 +436,35 @@ for path in \
   restore_generated_path "${path}"
 done
 rm -rf "${generated_config_backup_dir}"
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+default_path = Path('/etc/onlyoffice/documentserver/default.json')
+production_path = Path('/etc/onlyoffice/documentserver/production-linux.json')
+local_path = Path('/etc/onlyoffice/documentserver/local.json')
+
+if local_path.exists():
+    default_cfg = json.loads(default_path.read_text())
+    production_cfg = json.loads(production_path.read_text())
+    local_cfg = json.loads(local_path.read_text())
+
+    def native(cfg):
+        return cfg.get('services', {}).get('CoAuthoring', {}).get('server', {}).get('nativePdfCache', {})
+
+    merged = {}
+    merged.update(native(default_cfg))
+    merged.update(native(production_cfg))
+    merged.update(native(local_cfg))
+
+    services = local_cfg.setdefault('services', {})
+    coauthoring = services.setdefault('CoAuthoring', {})
+    server = coauthoring.setdefault('server', {})
+    server['nativePdfCache'] = merged
+
+    local_path.write_text(json.dumps(local_cfg, indent=2) + '\n')
+PY
 
 for cmd in /usr/bin/systemctl /usr/sbin/service; do
   if [ -e "${maintainer_backup_dir}${cmd}" ] || [ -L "${maintainer_backup_dir}${cmd}" ]; then
