@@ -180,6 +180,11 @@ require_manifest_text '"sdkjs/common/device_scale.js"'
 require_manifest_text '"sdkjs/word/sdk-all-min.js"'
 
 require_installed_api_text "function shouldUseNativePdfPreview(config)"
+require_installed_api_text "function isMobileNativePdfPreviewBrowser()"
+require_installed_api_text "function isNativePdfPreviewBrowserType(config)"
+require_installed_api_text "config.type !== 'mobile'"
+require_installed_api_text "nav.userAgentData && nav.userAgentData.mobile === true"
+require_installed_api_text "platform === 'MacIntel' && nav.maxTouchPoints > 1"
 require_installed_api_text "config.document && config.document.isForm !== true"
 require_installed_api_text "function getPreviewTraceElapsedMs(config)"
 require_installed_api_text "previewElapsedMs: getPreviewTraceElapsedMs(config)"
